@@ -4,6 +4,8 @@
 
 import type { Color } from '../style/Color.js';
 
+const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
+
 /**
  * A single cell in the terminal grid.
  */
@@ -39,8 +41,8 @@ export interface Cell {
 export function emptyCell(): Cell {
     return {
         char: ' ',
-        fg: { type: 'none' },
-        bg: { type: 'none' },
+        fg: EMPTY_COLOR,
+        bg: EMPTY_COLOR,
         bold: false,
         italic: false,
         underline: false,
@@ -54,8 +56,8 @@ export function emptyCell(): Cell {
 /** Reset a cell in-place to default attributes (avoids allocation). */
 export function resetCell(cell: Cell): void {
     cell.char = ' ';
-    cell.fg = { type: 'none' };
-    cell.bg = { type: 'none' };
+    cell.fg = EMPTY_COLOR;
+    cell.bg = EMPTY_COLOR;
     cell.bold = false;
     cell.italic = false;
     cell.underline = false;
