@@ -50,8 +50,11 @@ export class DatePicker extends Widget {
     }
 
     changeMonth(months: number): void {
-        const newDate = new Date(this._selectedDate);
-        newDate.setMonth(newDate.getMonth() + months);
+        const targetMonth = this._selectedDate.getMonth() + months;
+        const targetYear = this._selectedDate.getFullYear();
+        const lastDayOfTarget = new Date(targetYear, targetMonth + 1, 0).getDate();
+        const clampedDay = Math.min(this._selectedDate.getDate(), lastDayOfTarget);
+        const newDate = new Date(targetYear, targetMonth, clampedDay);
         this._selectedDate = newDate;
         this._currentMonth = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
         this.markDirty();

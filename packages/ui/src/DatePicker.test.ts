@@ -83,4 +83,14 @@ describe('DatePicker', () => {
         expect(arg.getMonth()).toBe(5);
         expect(arg.getDate()).toBe(16);
     });
+
+    it('clamps day when changing to a shorter month', () => {
+        const testDate = new Date(2026, 0, 31); // Jan 31, 2026
+        const picker = new DatePicker({ value: testDate });
+
+        // Jan 31 + pagedown -> Feb: Feb has 28 days, should clamp to Feb 28
+        picker.handleKey(makeKeyEvent('pagedown'));
+        expect(picker.value.getMonth()).toBe(1); // February
+        expect(picker.value.getDate()).toBe(28); // clamped, not rolled to Mar 3
+    });
 });
