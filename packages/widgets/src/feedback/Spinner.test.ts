@@ -10,6 +10,10 @@ describe('Spinner', () => {
     const originalMotion = caps.motion;
     const originalUnicode = caps.unicode;
 
+    beforeEach(() => {
+        (caps as unknown as { motion: boolean }).motion = true;
+    });
+
     afterEach(() => {
         (caps as unknown as { motion: boolean }).motion = originalMotion;
         (caps as unknown as { unicode: boolean }).unicode = originalUnicode;
