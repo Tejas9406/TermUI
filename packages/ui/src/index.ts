@@ -80,6 +80,9 @@ export type { ShortcutBinding, KeyboardShortcutsOptions } from './KeyboardShortc
 export { FilePicker } from './FilePicker.js';
 export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 
+export { DatePicker } from './DatePicker.js';
+export type { DatePickerOptions } from './DatePicker.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
