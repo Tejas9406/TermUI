@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ColorPicker } from './ColorPicker.js';
 import { type KeyEvent, caps, Screen, parseColor } from '@termuijs/core';
 
@@ -13,6 +13,10 @@ const makeKeyEvent = (key: string): KeyEvent => ({
 });
 
 describe('ColorPicker', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('initializes with the correct default value and resolves palette index', () => {
         const picker = new ColorPicker({ value: '#ff0000' }); // red hex
         expect(picker.value).toEqual(parseColor('#ff0000'));
@@ -77,23 +81,14 @@ describe('ColorPicker', () => {
         const picker = new ColorPicker({ value: 'red' });
         const screen = new Screen(40, 7);
 
-        // Render in current caps mode
         picker.mount();
         picker.updateRect({ x: 0, y: 0, width: 40, height: 7 });
+
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         picker.render(screen);
 
-        // Toggle caps.unicode and verify no crashes
-        const origUnicode = caps.unicode;
-        
-        (caps as any).unicode = true;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         picker.markDirty();
         picker.render(screen);
-
-        (caps as any).unicode = false;
-        picker.markDirty();
-        picker.render(screen);
-
-        // Restore original caps mode
-        (caps as any).unicode = origUnicode;
     });
 });
