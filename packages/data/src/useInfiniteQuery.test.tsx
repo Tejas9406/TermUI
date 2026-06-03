@@ -189,8 +189,54 @@ describe('useInfiniteQuery', () => {
         resolve(['orphan-data']);
         await flush();
 
-        // pages must remain unchanged (isMounted guard prevented setState)
+        // pages must remain unchanged (AbortController guard prevented setState)
         expect(result!.pages).toBe(pagesAfterUnmount);
         expect(result!.pages).toHaveLength(0);
+    });
+
+    it('discards in-flight fetches when queryFn changes', async () => {
+        // Two manually-controlled promises
+        let resolveA!: (value: string[]) => void;
+        const promiseA = new Promise<string[]>(res => { resolveA = res; });
+        const queryFnA = vi.fn(() => promiseA);
+
+        let resolveB!: (value: string[]) => void;
+        const promiseB = new Promise<string[]>(res => { resolveB = res; });
+        const queryFnB = vi.fn(() => promiseB);
+
+        const getNextPageParam = vi.fn(() => undefined);
+
+        let result: ReturnType<typeof useInfiniteQuery<string[], number>> | undefined;
+        let currentQueryFn = queryFnA as (p: number) => Promise<string[]>;
+
+        function TestComponent() {
+            result = useInfiniteQuery<string[], number>({
+                queryFn: currentQueryFn,
+                initialPageParam: 1,
+                getNextPageParam,
+            });
+            return null;
+        }
+
+        const { rerender } = render(<TestComponent />);
+
+        // queryFnA is in flight
+        expect(result!.loading).toBe(true);
+
+        // Switch to queryFnB — effect re-runs, old fetch should be discarded
+        currentQueryFn = queryFnB;
+        rerender(<TestComponent />);
+
+        // Resolve the old (stale) fetch — must be ignored
+        resolveA(['stale-data']);
+        await flush();
+
+        // Resolve the new (fresh) fetch
+        resolveB(['fresh-data']);
+        await flush();
+
+        // Only fresh data should appear; stale data from queryFnA is discarded
+        expect(result!.pages).toEqual([['fresh-data']]);
+        expect(result!.pages).not.toContainEqual(['stale-data']);
     });
 });

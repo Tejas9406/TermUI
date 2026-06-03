@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────
 // @termuijs/data — Reactive hooks for system metrics
 // ─────────────────────────────────────────────────────
 
@@ -432,29 +432,43 @@ export function useInfiniteQuery<T, P = number>(
     const [error, setError] = useState<Error | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
-    // Ref-based mount guard shared between the initial effect and fetchNextPage.
-    const isMounted = useRef(true);
+    // Per-run AbortController for the initial-page effect.
+    // Each effect run creates a fresh controller and aborts the previous one on
+    // cleanup, so stale promise callbacks see `signal.aborted === true` and bail.
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Generation counter for fetchNextPage: incremented when the main effect
+    // re-runs (queryFn / initialPageParam changed), so any in-flight
+    // fetchNextPage response belonging to the old generation is discarded.
+    const generationRef = useRef(0);
 
     // Fetch the first page on mount (re-runs if queryFn / initialPageParam change).
     useEffect(() => {
-        isMounted.current = true;
+        // Abort any previous in-flight fetch from the last effect run.
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        // Invalidate any in-flight fetchNextPage from the old generation.
+        generationRef.current += 1;
+
         setLoading(true);
 
         queryFn(initialPageParam)
             .then(page => {
-                if (!isMounted.current) return;
+                if (controller.signal.aborted) return;
                 setPages([page]);
                 setError(null);
                 setLoading(false);
             })
             .catch(err => {
-                if (!isMounted.current) return;
+                if (controller.signal.aborted) return;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
             });
 
         return () => {
-            isMounted.current = false;
+            controller.abort();
         };
     }, [queryFn, initialPageParam]);
 
@@ -469,16 +483,20 @@ export function useInfiniteQuery<T, P = number>(
         // No-op while a fetch is in flight or when there is no next page.
         if (loading || nextParam === undefined) return;
 
+        // Capture the current generation; if the main effect re-runs before
+        // this promise settles, the generation will have changed and we skip.
+        const myGeneration = generationRef.current;
+
         setLoading(true);
         queryFn(nextParam)
             .then(page => {
-                if (!isMounted.current) return;
+                if (myGeneration !== generationRef.current) return;
                 setPages(prev => [...prev, page]);
                 setError(null);
                 setLoading(false);
             })
             .catch(err => {
-                if (!isMounted.current) return;
+                if (myGeneration !== generationRef.current) return;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
             });
