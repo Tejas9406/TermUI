@@ -1,4 +1,4 @@
-﻿// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
 // @termuijs/data — Reactive hooks for system metrics
 // ─────────────────────────────────────────────────────
 
@@ -442,6 +442,9 @@ export function useInfiniteQuery<T, P = number>(
     // fetchNextPage response belonging to the old generation is discarded.
     const generationRef = useRef(0);
 
+    // Guard against rapid double-clicks or fast-scrolling triggering duplicate fetches.
+    const loadingRef = useRef(false);
+
     // Fetch the first page on mount (re-runs if queryFn / initialPageParam change).
     useEffect(() => {
         // Abort any previous in-flight fetch from the last effect run.
@@ -453,6 +456,7 @@ export function useInfiniteQuery<T, P = number>(
         generationRef.current += 1;
 
         setLoading(true);
+        loadingRef.current = true;
 
         queryFn(initialPageParam)
             .then(page => {
@@ -460,14 +464,17 @@ export function useInfiniteQuery<T, P = number>(
                 setPages([page]);
                 setError(null);
                 setLoading(false);
+                loadingRef.current = false;
             })
             .catch(err => {
                 if (controller.signal.aborted) return;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
+                loadingRef.current = false;
             });
 
         return () => {
+            generationRef.current += 1;
             controller.abort();
         };
     }, [queryFn, initialPageParam]);
@@ -481,7 +488,9 @@ export function useInfiniteQuery<T, P = number>(
 
     const fetchNextPage = useCallback(() => {
         // No-op while a fetch is in flight or when there is no next page.
-        if (loading || nextParam === undefined) return;
+        if (loadingRef.current || nextParam === undefined) return;
+
+        loadingRef.current = true;
 
         // Capture the current generation; if the main effect re-runs before
         // this promise settles, the generation will have changed and we skip.
@@ -491,16 +500,18 @@ export function useInfiniteQuery<T, P = number>(
         queryFn(nextParam)
             .then(page => {
                 if (myGeneration !== generationRef.current) return;
+                loadingRef.current = false;
                 setPages(prev => [...prev, page]);
                 setError(null);
                 setLoading(false);
             })
             .catch(err => {
                 if (myGeneration !== generationRef.current) return;
+                loadingRef.current = false;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
             });
-    }, [loading, nextParam, queryFn]);
+    }, [nextParam, queryFn]);
 
     return { pages, error, loading, hasNextPage, fetchNextPage };
 }

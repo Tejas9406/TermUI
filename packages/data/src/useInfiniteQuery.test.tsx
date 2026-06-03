@@ -239,4 +239,107 @@ describe('useInfiniteQuery', () => {
         expect(result!.pages).toEqual([['fresh-data']]);
         expect(result!.pages).not.toContainEqual(['stale-data']);
     });
+
+    it('cleans up fetchNextPage after unmount', async () => {
+        let resolveA!: (value: string[]) => void;
+        const promiseA = new Promise<string[]>(res => { resolveA = res; });
+
+        let resolveB!: (value: string[]) => void;
+        const promiseB = new Promise<string[]>(res => { resolveB = res; });
+
+        let call = 0;
+        const queryFn = vi.fn(() => {
+            return call++ === 0 ? promiseA : promiseB;
+        });
+
+        const getNextPageParam = vi.fn((last: string[]) => {
+            return last.includes('fresh-data') ? 2 : undefined;
+        });
+
+        let result: ReturnType<typeof useInfiniteQuery<string[], number>> | undefined;
+
+        function TestComponent() {
+            result = useInfiniteQuery<string[], number>({
+                queryFn,
+                initialPageParam: 1,
+                getNextPageParam,
+            });
+            return null;
+        }
+
+        const { unmount } = render(<TestComponent />);
+
+        // Resolve first page
+        resolveA(['fresh-data']);
+        await flush();
+
+        expect(result!.pages).toHaveLength(1);
+        expect(result!.hasNextPage).toBe(true);
+
+        // Call fetchNextPage, which runs queryFn(2) with promiseB
+        result!.fetchNextPage();
+
+        // Unmount before page 2 resolves
+        unmount();
+
+        const pagesAfterUnmount = result!.pages;
+
+        // Resolve the pending fetchNextPage query
+        resolveB(['second-data']);
+        await flush();
+
+        // Pages should not update since it unmounted
+        expect(result!.pages).toBe(pagesAfterUnmount);
+        expect(result!.pages).toHaveLength(1);
+    });
+
+    it('guards against rapid synchronous double-calls of fetchNextPage', async () => {
+        let resolveA!: (value: string[]) => void;
+        const promiseA = new Promise<string[]>(res => { resolveA = res; });
+
+        let resolveB!: (value: string[]) => void;
+        const promiseB = new Promise<string[]>(res => { resolveB = res; });
+
+        let call = 0;
+        const queryFn = vi.fn(() => {
+            return call++ === 0 ? promiseA : promiseB;
+        });
+
+        const getNextPageParam = vi.fn((last: string[]) => {
+            return last.includes('first-data') ? 2 : undefined;
+        });
+
+        let result: ReturnType<typeof useInfiniteQuery<string[], number>> | undefined;
+
+        function TestComponent() {
+            result = useInfiniteQuery<string[], number>({
+                queryFn,
+                initialPageParam: 1,
+                getNextPageParam,
+            });
+            return null;
+        }
+
+        render(<TestComponent />);
+
+        // Resolve first page
+        resolveA(['first-data']);
+        await flush();
+
+        expect(result!.pages).toHaveLength(1);
+        expect(result!.hasNextPage).toBe(true);
+
+        // Synchronously call fetchNextPage twice
+        result!.fetchNextPage();
+        result!.fetchNextPage();
+
+        // queryFn should only be called once for page 2 (total calls = 2, first page + second page)
+        expect(queryFn).toHaveBeenCalledTimes(2);
+
+        // Resolve second page
+        resolveB(['second-data']);
+        await flush();
+
+        expect(result!.pages).toHaveLength(2);
+    });
 });
