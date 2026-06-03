@@ -394,3 +394,95 @@ export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFe
     return { data, error, loading };
 }
 
+// ── Infinite Query ────────────────────────────────────
+
+export interface InfiniteQueryOptions<T, P> {
+    /** Called with a page param; resolves to one page of data. */
+    queryFn: (pageParam: P) => Promise<T>;
+    /** Param used for the very first page fetch. */
+    initialPageParam: P;
+    /**
+     * Given the last fetched page and all pages so far, return the param
+     * for the next page, or `undefined` to signal no more pages.
+     */
+    getNextPageParam: (lastPage: T, allPages: T[]) => P | undefined;
+}
+
+export interface UseInfiniteQueryResult<T> {
+    pages: T[];
+    error: Error | null;
+    loading: boolean;
+    hasNextPage: boolean;
+    fetchNextPage: () => void;
+}
+
+/**
+ * useInfiniteQuery — paged fetch hook.
+ *
+ * Fetches the first page on mount using `initialPageParam`.
+ * Subsequent pages are appended by calling `fetchNextPage()`.
+ * `hasNextPage` becomes false when `getNextPageParam` returns `undefined`.
+ */
+export function useInfiniteQuery<T, P = number>(
+    options: InfiniteQueryOptions<T, P>,
+): UseInfiniteQueryResult<T> {
+    const { queryFn, initialPageParam, getNextPageParam } = options;
+
+    const [pages, setPages] = useState<T[]>([]);
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    // Ref-based mount guard shared between the initial effect and fetchNextPage.
+    const isMounted = useRef(true);
+
+    // Fetch the first page on mount (re-runs if queryFn / initialPageParam change).
+    useEffect(() => {
+        isMounted.current = true;
+        setLoading(true);
+
+        queryFn(initialPageParam)
+            .then(page => {
+                if (!isMounted.current) return;
+                setPages([page]);
+                setError(null);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (!isMounted.current) return;
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+            });
+
+        return () => {
+            isMounted.current = false;
+        };
+    }, [queryFn, initialPageParam]);
+
+    // Derive next param and hasNextPage from current pages snapshot.
+    const nextParam = pages.length > 0
+        ? getNextPageParam(pages[pages.length - 1], pages)
+        : undefined;
+
+    const hasNextPage = nextParam !== undefined;
+
+    const fetchNextPage = useCallback(() => {
+        // No-op while a fetch is in flight or when there is no next page.
+        if (loading || nextParam === undefined) return;
+
+        setLoading(true);
+        queryFn(nextParam)
+            .then(page => {
+                if (!isMounted.current) return;
+                setPages(prev => [...prev, page]);
+                setError(null);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (!isMounted.current) return;
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+            });
+    }, [loading, nextParam, queryFn]);
+
+    return { pages, error, loading, hasNextPage, fetchNextPage };
+}
