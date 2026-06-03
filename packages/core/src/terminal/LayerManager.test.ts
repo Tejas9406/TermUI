@@ -4,7 +4,6 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { LayerManager } from './LayerManager.js';
-import { caps } from './env-caps.js';
 
 describe('LayerManager — Hit Testing', () => {
     afterEach(() => {
