@@ -11,7 +11,7 @@ export function useCommander<T extends Record<string, unknown> = Record<string, 
 ): CommanderResult<T> {
   program.parse(argv ?? process.argv)
   return {
-    options: program.opts<T>(),
+    options: program.opts() as T,
     args: program.args,
   }
 }

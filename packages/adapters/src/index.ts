@@ -32,6 +32,9 @@ export type {
   AIProvider,
 } from './ai/index.js'
 
+export { LocalVectorStore, indexDirectory, chunkText } from './ai/vectorStore.js'
+export type { DocumentChunk, VectorStoreOptions } from './ai/vectorStore.js'
+
 export { useDotenv } from './dotenv/index.js'
 export type { DotenvValues, UseDotenvResult } from './dotenv/index.js'
 

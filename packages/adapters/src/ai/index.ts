@@ -14,6 +14,7 @@ export interface AIMessage {
 export interface AIAdapter {
   generate(prompt: string): Promise<string>
   chat(messages: AIMessage[]): AsyncIterable<string>
+  embed(text: string): Promise<number[]>
 }
 
 function isModuleNotFound(error: unknown, moduleName: string): boolean {
@@ -112,6 +113,19 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
           yield event.delta.text
         }
       }
+    },
+
+    async embed(text: string): Promise<number[]> {
+      if (provider === 'openai') {
+        const OpenAI = loadOpenAI()
+        const client = new OpenAI({ apiKey: options.apiKey })
+        const response = await client.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: text,
+        })
+        return response.data[0]?.embedding ?? []
+      }
+      throw new Error('Embeddings are only supported with the openai provider')
     },
   }
 }

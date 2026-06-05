@@ -208,3 +208,6 @@ export type { DisclosureOptions } from './Disclosure.js';
 
 export { Listbar } from './Listbar.js';
 export type { ListbarOptions, ListbarItem } from './Listbar.js';
+
+export { RAGChat } from './RAGChat.js';
+export type { RAGChatOptions } from './RAGChat.js';

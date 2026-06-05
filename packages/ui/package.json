@@ -29,6 +29,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
+    "@termuijs/adapters": "workspace:*",
     "@termuijs/core": "workspace:*",
     "@termuijs/jsx": "workspace:*",
     "@termuijs/widgets": "workspace:*"
