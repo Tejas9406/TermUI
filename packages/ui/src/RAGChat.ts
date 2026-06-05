@@ -89,6 +89,7 @@ export class RAGChat extends Widget {
         if (this.onError) {
             this.onError(err);
         }
+        // Cast needed: Widget event typings do not include custom 'error', but runtime emitter supports it.
         (this.events as any).emit('error', err);
     }
 

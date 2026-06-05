@@ -35,7 +35,7 @@ describe('RAGChat', () => {
             ]),
             load: vi.fn(),
             save: vi.fn(),
-        } as any;
+        } as any; // Cast needed: mockVectorStore only implements members used by this test (not the full typed interface).
     });
 
     afterEach(async () => {
@@ -54,7 +54,7 @@ describe('RAGChat', () => {
         preventDefault: () => {},
     });
 
-    const awaitIndex = async (store: any) => {
+    const awaitIndex = async (store: any) => { // Cast needed: store is a test double; only `save` mock call count is used here.
         await new Promise<void>(resolve => {
             const timer = setInterval(() => {
                 if (store.save.mock.calls.length > 0) {
@@ -142,7 +142,7 @@ describe('RAGChat', () => {
             docsPath: tempDocsDir,
             onError: onErrorSpy,
         });
-        chat.events.on('error' as any, eventSpy);
+        chat.events.on('error' as any, eventSpy); // Cast needed: test subscribes to event key not represented in the typed event map.
 
         await flush();
         await flush();
@@ -164,7 +164,7 @@ describe('RAGChat', () => {
             docsPath: tempDocsDir,
             onError: onErrorSpy,
         });
-        chat2.events.on('error' as any, eventSpy);
+        chat2.events.on('error' as any, eventSpy); // Cast needed: test subscribes to event key not represented in the typed event map.
         await awaitIndex(mockVectorStore);
 
         chat2.isFocused = true;
