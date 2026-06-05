@@ -17,6 +17,7 @@ export interface RAGChatOptions {
     docsPath: string; // Directory containing markdown/text documents to index
     maxContextChunks?: number; // default: 3
     borderColor?: string;
+    onError?: (error: Error) => void;
 }
 
 function wrapText(text: string, maxWidth: number): string[] {
@@ -58,6 +59,8 @@ export class RAGChat extends Widget {
 
     focusable = true;
 
+    public onError?: (error: Error) => void;
+
     constructor(style: Partial<Style> = {}, opts?: RAGChatOptions) {
         super(mergeStyles(defaultStyle(), { border: 'single', height: 20, ...style }));
 
@@ -69,13 +72,24 @@ export class RAGChat extends Widget {
         this._vectorStore = opts.vectorStore;
         this._docsPath = opts.docsPath;
         this._maxContextChunks = opts.maxContextChunks ?? 3;
+        this.onError = opts.onError;
 
         const borderClr = opts.borderColor ?? 'cyan';
         this._borderColor = typeof borderClr === 'string'
-            ? { type: 'named', name: borderClr as any }
+            ? { type: 'named', name: borderClr as any } // Cast needed because named color string doesn't match the Style['fg'] union shape directly
             : borderClr;
 
-        this._initIndex();
+        this._initIndex().catch(err => {
+            this._handleError(err);
+        });
+    }
+
+    protected _handleError(error: unknown): void {
+        const err = error instanceof Error ? error : new Error(String(error));
+        if (this.onError) {
+            this.onError(err);
+        }
+        (this.events as any).emit('error', err);
     }
 
     private async _initIndex(): Promise<void> {
@@ -87,7 +101,7 @@ export class RAGChat extends Widget {
             await indexDirectory(this._docsPath, this._vectorStore, this._ai);
             await this._vectorStore.save();
         } catch (error) {
-            console.error('Failed to initialize RAG index:', error);
+            throw error;
         } finally {
             this._indexing = false;
             this._loading = false;
@@ -121,7 +135,7 @@ export class RAGChat extends Widget {
                 this.markDirty();
             }
         } catch (error) {
-            console.error('RAG query failed:', error);
+            this._handleError(error);
             this._messages.push({
                 role: 'assistant',
                 content: `Error: ${error instanceof Error ? error.message : String(error)}`,
@@ -191,6 +205,7 @@ export class RAGChat extends Widget {
         const attrs = styleToCellAttrs(this.style);
         const border = getBorderChars('single');
         if (!border) return;
+        // Cast needed: border style 'fg' type expects specific Color union, so { type: 'named', name: 'dim' } is cast as any for compatibility.
         const ba = { ...attrs, fg: this.isFocused ? this._borderColor : { type: 'named', name: 'dim' } as any };
 
         // Outer box
@@ -216,6 +231,7 @@ export class RAGChat extends Widget {
             const wrapWidth = width - 6;
             const lines = wrapText(msg.content, wrapWidth);
             const prefix = msg.role === 'user' ? 'You: ' : 'AI: ';
+            // Cast needed: Color type mismatches with CellAttr's fg field expecting discrete types, so user color is cast as any.
             const fgColor = msg.role === 'user' ? ({ type: 'named', name: 'green' } as any) : undefined;
             for (let i = 0; i < lines.length; i++) {
                 if (i === 0) {
@@ -248,8 +264,10 @@ export class RAGChat extends Widget {
 
         // Render indexing / loading state in a subtle corner badge
         if (this._indexing) {
+            // Cast needed: Color literal string or named structure is cast as any due to library-specific CellAttr type mismatches.
             screen.writeString(x + width - 15, y, '[ Indexing... ]', { ...attrs, fg: { type: 'named', name: 'yellow' } as any });
         } else if (this._loading) {
+            // Cast needed: Color literal string or named structure is cast as any due to library-specific CellAttr type mismatches.
             screen.writeString(x + width - 14, y, '[ Thinking... ]', { ...attrs, fg: { type: 'named', name: 'yellow' } as any });
         }
 

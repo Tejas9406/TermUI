@@ -129,4 +129,52 @@ describe('RAGChat', () => {
 
         expect(mockAI.chat).toHaveBeenCalled();
     });
+
+    it('propagates index initialization errors and query errors to onError handler and events emitter', async () => {
+        const initError = new Error('Init failed');
+        mockVectorStore.load = vi.fn().mockRejectedValue(initError);
+        const onErrorSpy = vi.fn();
+        const eventSpy = vi.fn();
+
+        const chat = new RAGChat({}, {
+            ai: mockAI,
+            vectorStore: mockVectorStore,
+            docsPath: tempDocsDir,
+            onError: onErrorSpy,
+        });
+        chat.events.on('error' as any, eventSpy);
+
+        await flush();
+        await flush();
+
+        expect(onErrorSpy).toHaveBeenCalledWith(initError);
+        expect(eventSpy).toHaveBeenCalledWith(initError);
+
+        // Reset spy and simulate a query error
+        onErrorSpy.mockReset();
+        eventSpy.mockReset();
+        mockVectorStore.load = vi.fn().mockResolvedValue(undefined);
+        
+        const queryError = new Error('Query failed');
+        mockVectorStore.query = vi.fn().mockRejectedValue(queryError);
+
+        const chat2 = new RAGChat({}, {
+            ai: mockAI,
+            vectorStore: mockVectorStore,
+            docsPath: tempDocsDir,
+            onError: onErrorSpy,
+        });
+        chat2.events.on('error' as any, eventSpy);
+        await awaitIndex(mockVectorStore);
+
+        chat2.isFocused = true;
+        chat2.handleKey(makeKeyEvent('Q'));
+        chat2.handleKey(makeKeyEvent('enter'));
+
+        await flush();
+        await flush();
+
+        expect(onErrorSpy).toHaveBeenCalledWith(queryError);
+        expect(eventSpy).toHaveBeenCalledWith(queryError);
+    });
 });

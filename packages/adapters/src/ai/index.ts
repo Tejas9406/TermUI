@@ -123,7 +123,11 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
           model: 'text-embedding-3-small',
           input: text,
         })
-        return response.data[0]?.embedding ?? []
+        const embedding = response.data[0]?.embedding
+        if (!embedding) {
+          throw new Error('OpenAI client failed to return an embedding')
+        }
+        return embedding
       }
       throw new Error('Embeddings are only supported with the openai provider')
     },

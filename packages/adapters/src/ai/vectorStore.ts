@@ -82,10 +82,10 @@ export async function indexDirectory(
     for (const file of files) {
         const text = await fs.readFile(file, 'utf-8');
         const chunks = chunkText(text, 500, 50);
-        for (const chunkText of chunks) {
+        for (const chunk of chunks) {
             docs.push({
                 id: `${path.basename(file)}-chunk-${chunkCounter++}`,
-                text: chunkText,
+                text: chunk,
                 filePath: file,
             });
         }
