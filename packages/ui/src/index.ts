@@ -185,3 +185,10 @@ export type { EmailInputOptions } from './EmailInput.js';
 
 export { QuizPrompt } from './QuizPrompt.js';
 export type { QuizPromptOptions, QuizQuestion, QuizResult } from './QuizPrompt.js';
+
+export { EditablePrompt } from './EditablePrompt.js';
+export type {
+    EditablePromptChoice,
+    EditablePromptResult,
+    EditablePromptOptions,
+} from './EditablePrompt.js';
