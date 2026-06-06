@@ -1,22 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as fs from 'node:fs/promises';
+import * as fsPromises from 'node:fs/promises';
 import * as path from 'node:path';
 import { RAGChat } from './RAGChat.js';
-import { type AIAdapter } from './index.js';
-import { LocalVectorStore } from './vectorStore.js';
 import { Screen, KeyEvent } from '@termuijs/core';
 
 const flush = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
 describe('RAGChat', () => {
-    let mockAI: AIAdapter;
-    let mockVectorStore: LocalVectorStore;
+    let mockAI: any;
+    let mockVectorStore: any;
     let tempDocsDir: string;
+    let mockIndexFn: any;
 
     beforeEach(async () => {
         tempDocsDir = path.join(process.cwd(), 'temp-test-rag-chat-docs');
-        await fs.mkdir(tempDocsDir, { recursive: true });
-        await fs.writeFile(path.join(tempDocsDir, 'doc1.md'), 'TermUI widgets are beautiful', 'utf-8');
+        await fsPromises.mkdir(tempDocsDir, { recursive: true });
+        await fsPromises.writeFile(path.join(tempDocsDir, 'doc1.md'), 'TermUI widgets are beautiful', 'utf-8');
 
         mockAI = {
             generate: vi.fn(),
@@ -36,12 +35,14 @@ describe('RAGChat', () => {
             ]),
             load: vi.fn(),
             save: vi.fn(),
-        } as any; // Cast needed: mockVectorStore only implements members used by this test (not the full typed interface).
+        };
+
+        mockIndexFn = vi.fn();
     });
 
     afterEach(async () => {
         try {
-            await fs.rm(tempDocsDir, { recursive: true, force: true });
+            await fsPromises.rm(tempDocsDir, { recursive: true, force: true });
         } catch {}
     });
 
@@ -75,6 +76,7 @@ describe('RAGChat', () => {
             ai: mockAI,
             vectorStore: mockVectorStore,
             docsPath: tempDocsDir,
+            indexFn: mockIndexFn,
         });
 
         const screen = new Screen(60, 20);
@@ -85,6 +87,11 @@ describe('RAGChat', () => {
 
         expect(mockVectorStore.load).toHaveBeenCalled();
         expect(mockVectorStore.save).toHaveBeenCalled();
+        expect(mockIndexFn).toHaveBeenCalled();
+
+        // Assert rendered output from the screen to verify visible UI elements
+        const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(rendered).toContain('Ask a question against docs...');
     });
 
     it('submits input, triggers retrieval query, and shows loading state', async () => {
@@ -92,6 +99,7 @@ describe('RAGChat', () => {
             ai: mockAI,
             vectorStore: mockVectorStore,
             docsPath: tempDocsDir,
+            indexFn: mockIndexFn,
         });
 
         await awaitIndex(mockVectorStore);
@@ -101,12 +109,26 @@ describe('RAGChat', () => {
             chat.handleKey(makeKeyEvent(ch));
         }
 
+        // Verify the input is rendered in the input field before submission
+        const screenBefore = new Screen(60, 20);
+        chat.updateRect({ x: 0, y: 0, width: 60, height: 20 });
+        chat.render(screenBefore);
+        const renderedBefore = screenBefore.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(renderedBefore).toContain('What is TermUI?');
+
         chat.handleKey(makeKeyEvent('enter'));
 
         await flush();
         await flush();
 
         expect(mockVectorStore.query).toHaveBeenCalledWith('What is TermUI?', mockAI, 3);
+        
+        // After enter, input is submitted, query input should be cleared
+        chat.isFocused = false;
+        const screenAfter = new Screen(60, 20);
+        chat.render(screenAfter);
+        const renderedAfter = screenAfter.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(renderedAfter).toContain('Ask a question against docs...'); // Placeholder should be visible again
     });
 
     it('streams AI tokens into the history list on response', async () => {
@@ -114,6 +136,7 @@ describe('RAGChat', () => {
             ai: mockAI,
             vectorStore: mockVectorStore,
             docsPath: tempDocsDir,
+            indexFn: mockIndexFn,
         });
 
         await awaitIndex(mockVectorStore);
@@ -129,6 +152,13 @@ describe('RAGChat', () => {
         await flush();
 
         expect(mockAI.chat).toHaveBeenCalled();
+
+        // The streamed response should be rendered in the message area
+        const screen = new Screen(60, 20);
+        chat.updateRect({ x: 0, y: 0, width: 60, height: 20 });
+        chat.render(screen);
+        const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(rendered).toContain('AI: Here is the answer.');
     });
 
     it('propagates index initialization errors and query errors to onError handler and events emitter', async () => {
@@ -142,6 +172,7 @@ describe('RAGChat', () => {
             vectorStore: mockVectorStore,
             docsPath: tempDocsDir,
             onError: onErrorSpy,
+            indexFn: mockIndexFn,
         });
         chat.events.on('error' as any, eventSpy); // Cast needed: test subscribes to event key not represented in the typed event map.
 
@@ -164,6 +195,7 @@ describe('RAGChat', () => {
             vectorStore: mockVectorStore,
             docsPath: tempDocsDir,
             onError: onErrorSpy,
+            indexFn: mockIndexFn,
         });
         chat2.events.on('error' as any, eventSpy); // Cast needed: test subscribes to event key not represented in the typed event map.
         await awaitIndex(mockVectorStore);

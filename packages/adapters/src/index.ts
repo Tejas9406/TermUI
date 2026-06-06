@@ -34,8 +34,6 @@ export type {
 
 export { LocalVectorStore, indexDirectory, chunkText } from './ai/vectorStore.js'
 export type { DocumentChunk, VectorStoreOptions } from './ai/vectorStore.js'
-export { RAGChat } from './ai/RAGChat.js'
-export type { RAGChatOptions } from './ai/RAGChat.js'
 
 export { useDotenv } from './dotenv/index.js'
 export type { DotenvValues, UseDotenvResult } from './dotenv/index.js'

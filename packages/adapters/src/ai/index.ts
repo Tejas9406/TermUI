@@ -29,6 +29,7 @@ function isModuleNotFound(error: unknown, moduleName: string): boolean {
 function loadOpenAI() {
   try {
     const req = createRequire(import.meta.url)
+    // Cast needed: createRequire/require returns an opaque module whose shape varies by export style (CJS vs ESM), so we treat it as any to access exported members safely.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod = req('openai') as any
     return 'default' in mod ? mod.default : mod
@@ -45,6 +46,7 @@ function loadOpenAI() {
 function loadAnthropic() {
   try {
     const req = createRequire(import.meta.url)
+    // Cast needed: dynamic runtime require is used for `@anthropic-ai/sdk` to avoid side-effects; we treat mod as any to bypass conditional typing until typings resolve.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod = req('@anthropic-ai/sdk') as any
     return 'default' in mod ? mod.default : mod
