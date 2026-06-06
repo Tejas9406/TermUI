@@ -14,7 +14,7 @@ export interface AIMessage {
 export interface AIAdapter {
   generate(prompt: string): Promise<string>
   chat(messages: AIMessage[]): AsyncIterable<string>
-  embed(text: string): Promise<number[]>
+  embed?(text: string): Promise<number[]>
 }
 
 function isModuleNotFound(error: unknown, moduleName: string): boolean {
@@ -59,7 +59,7 @@ function loadAnthropic() {
 }
 
 export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
-  return {
+  const adapter: AIAdapter = {
     async generate(prompt: string): Promise<string> {
       if (provider === 'openai') {
         const OpenAI = loadOpenAI()
@@ -114,22 +114,24 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
         }
       }
     },
-
-    async embed(text: string): Promise<number[]> {
-      if (provider === 'openai') {
-        const OpenAI = loadOpenAI()
-        const client = new OpenAI({ apiKey: options.apiKey })
-        const response = await client.embeddings.create({
-          model: 'text-embedding-3-small',
-          input: text,
-        })
-        const embedding = response.data[0]?.embedding
-        if (!embedding) {
-          throw new Error('OpenAI client failed to return an embedding')
-        }
-        return embedding
-      }
-      throw new Error('Embeddings are only supported with the openai provider')
-    },
   }
+
+  if (provider === 'openai') {
+    adapter.embed = async (text: string): Promise<number[]> => {
+      const OpenAI = loadOpenAI()
+      const client = new OpenAI({ apiKey: options.apiKey })
+      const response = await client.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: text,
+      })
+      const embedding = response.data[0]?.embedding
+      if (!embedding) {
+        throw new Error('OpenAI client failed to return an embedding')
+      }
+      return embedding
+    }
+  }
+
+  return adapter
 }
+

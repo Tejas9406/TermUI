@@ -7,9 +7,9 @@ import {
     defaultStyle,
     styleToCellAttrs,
     getBorderChars,
-    caps,
 } from '@termuijs/core';
-import { AIAdapter, LocalVectorStore, indexDirectory, DocumentChunk } from '@termuijs/adapters';
+import { type AIAdapter } from './index.js';
+import { LocalVectorStore, indexDirectory, type DocumentChunk } from './vectorStore.js';
 
 export interface RAGChatOptions {
     ai: AIAdapter;
@@ -101,8 +101,6 @@ export class RAGChat extends Widget {
             await this._vectorStore.load();
             await indexDirectory(this._docsPath, this._vectorStore, this._ai);
             await this._vectorStore.save();
-        } catch (error) {
-            throw error;
         } finally {
             this._indexing = false;
             this._loading = false;

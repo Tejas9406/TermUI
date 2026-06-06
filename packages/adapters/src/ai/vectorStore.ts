@@ -104,6 +104,9 @@ export class LocalVectorStore {
     }
 
     async addDocuments(docs: Omit<DocumentChunk, 'embedding'>[], ai: AIAdapter): Promise<void> {
+        if (!ai.embed) {
+            throw new Error('The AI adapter does not support embeddings.');
+        }
         for (const doc of docs) {
             const embedding = await ai.embed(doc.text);
             this._documents.push({
@@ -114,6 +117,9 @@ export class LocalVectorStore {
     }
 
     async query(queryText: string, ai: AIAdapter, limit = 3): Promise<DocumentChunk[]> {
+        if (!ai.embed) {
+            throw new Error('The AI adapter does not support embeddings.');
+        }
         const queryEmbedding = await ai.embed(queryText);
         
         const results = this._documents.map(doc => {

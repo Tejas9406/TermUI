@@ -14,4 +14,4 @@ export function useCommander<T extends Record<string, unknown> = Record<string, 
     options: program.opts() as T, // Commander options bag is untyped at runtime; casting to caller-specified generic shape T
     args: program.args,
   }
-}
+}

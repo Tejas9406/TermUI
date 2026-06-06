@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { RAGChat } from './RAGChat.js';
-import { AIAdapter, LocalVectorStore } from '@termuijs/adapters';
+import { type AIAdapter } from './index.js';
+import { LocalVectorStore } from './vectorStore.js';
 import { Screen, KeyEvent } from '@termuijs/core';
 
 const flush = () => new Promise<void>(resolve => setTimeout(resolve, 0));
