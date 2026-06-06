@@ -149,24 +149,10 @@ export class Renderer {
             }
 
             for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const frontCell = front[r][c];
-                    const backCell = back[r][c];
-
-                    if (cellsEqual(frontCell, backCell)) continue;
-
-                    // Skip continuation cells (second half of wide chars)
-                    if (backCell.width === 0) continue;
-
-                    // Move cursor only if not already at the right position
-                    if (r !== lastRow || c !== lastCol) {
-                        output += moveTo(c, r);
-                    }
-
-                    output += this._renderCell(backCell);
-                    lastRow = r;
-                    lastCol = c + (backCell.width === 2 ? 2 : 1);
-                }
+                if (this._screen.getLine(r) === this._screen.getPreviousLine(r)
+                    && this._screen.getStyleLine(r) === this._screen.getPreviousStyleLine(r)) continue;
+                output += moveTo(0, r);
+                output += this._renderLine(r);
             }
 
             output += ansiReset;
