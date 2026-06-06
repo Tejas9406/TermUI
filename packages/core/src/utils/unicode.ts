@@ -2,6 +2,8 @@
 // @termuijs/core — Unicode string width utilities
 // ─────────────────────────────────────────────────────
 
+import { caps } from '../terminal/env-caps.js';
+
 /**
  * Check if a code point is a CJK (East Asian Wide/Fullwidth) character.
  * These characters occupy 2 terminal columns.
@@ -124,7 +126,7 @@ export function stringWidth(str: string): number {
 
         // Double-width
         if (isWideChar(cp) || isEmoji(cp)) {
-            width += 2;
+            width += caps.unicode ? 2 : 1;
             continue;
         }
 
@@ -174,7 +176,7 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
         if (isCombining(cp)) {
             charW = 0;
         } else if (isWideChar(cp) || isEmoji(cp)) {
-            charW = 2;
+            charW = caps.unicode ? 2 : 1;
         } else if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) {
             charW = 0;
         }
@@ -230,7 +232,7 @@ export function wordWrap(str: string, width: number): string {
                 }
                 for (const char of word) {
                     const cp = char.codePointAt(0)!;
-                    const charW = (isWideChar(cp) || isEmoji(cp)) ? 2 : (isCombining(cp) ? 0 : 1);
+                    const charW = (isWideChar(cp) || isEmoji(cp)) ? (caps.unicode ? 2 : 1) : (isCombining(cp) ? 0 : 1);
                     if (currentWidth + charW > width) {
                         result.push(currentLine);
                         currentLine = '';

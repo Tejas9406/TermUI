@@ -284,7 +284,7 @@ export class Screen {
 
             // Fallback for terminals without wide-character support
             if (width > 1 && !caps.unicode) {
-                finalChar = '*'; // safe single-cell substitute
+                finalChar = '?'; // safe single-cell substitute
                 width = 1;
             }
 

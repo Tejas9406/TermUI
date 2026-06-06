@@ -81,6 +81,7 @@ export class App {
     private _exitResolve: ((code: number) => void) | null = null;
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
+    private _unsubPaste: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
@@ -195,6 +196,11 @@ export class App {
             this.events.emit('mouse', event);
         });
 
+        // Forward paste events
+        this._unsubPaste = this.input.onPaste((text) => {
+            this.events.emit('paste', text);
+        });
+
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
         this.renderer.start(() => this.requestRender());
@@ -227,6 +233,8 @@ export class App {
         this._unsubKey = null;
         this._unsubMouse?.();
         this._unsubMouse = null;
+        this._unsubPaste?.();
+        this._unsubPaste = null;
 
         // Stop the stdout interceptor to restore native console.log behavior
         this.renderer.hook.stop();
@@ -329,6 +337,20 @@ export class App {
             this._exitResolve(code);
             this._exitResolve = null;
         }
+    }
+
+    /**
+     * Read from the system clipboard.
+     */
+    readClipboard(): Promise<string> {
+        return this.terminal.readClipboard();
+    }
+
+    /**
+     * Write to the system clipboard.
+     */
+    writeClipboard(text: string): void {
+        this.terminal.writeClipboard(text);
     }
 
     /**
