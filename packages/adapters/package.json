@@ -31,6 +31,8 @@
     "test": "vitest run --config ../../vitest.config.ts"
   },
   "dependencies": {
+    "@termuijs/core": "workspace:*",
+    "@termuijs/widgets": "workspace:*",
     "commander": "^15.0.0"
   },
   "devDependencies": {

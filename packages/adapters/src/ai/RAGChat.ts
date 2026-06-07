@@ -8,27 +8,16 @@ import {
     styleToCellAttrs,
     getBorderChars,
 } from '@termuijs/core';
-
-export interface AIAdapter {
-    generate(prompt: string): Promise<string>;
-    chat(messages: { role: 'user' | 'assistant'; content: string }[]): AsyncIterable<string>;
-    embed?(text: string): Promise<number[]>;
-}
-
-export interface VectorStore {
-    load(): Promise<void>;
-    save(): Promise<void>;
-    query(queryText: string, ai: AIAdapter, limit?: number): Promise<any[]>;
-}
+import { type AIAdapter } from './index.js';
+import { LocalVectorStore, indexDirectory, type DocumentChunk } from './vectorStore.js';
 
 export interface RAGChatOptions {
     ai: AIAdapter;
-    vectorStore: VectorStore;
+    vectorStore: LocalVectorStore;
     docsPath: string; // Directory containing markdown/text documents to index
     maxContextChunks?: number; // default: 3
     borderColor?: string;
     onError?: (error: Error) => void;
-    indexFn?: (docsPath: string, store: any, ai: any) => Promise<void>;
 }
 
 function wrapText(text: string, maxWidth: number): string[] {
@@ -56,11 +45,10 @@ function wrapText(text: string, maxWidth: number): string[] {
 
 export class RAGChat extends Widget {
     private _ai: AIAdapter;
-    private _vectorStore: VectorStore;
+    private _vectorStore: LocalVectorStore;
     private _docsPath: string;
     private _maxContextChunks: number;
     private _borderColor: Style['fg'];
-    private _indexFn?: (docsPath: string, store: any, ai: any) => Promise<void>;
 
     private _messages: { role: 'user' | 'assistant'; content: string }[] = [];
     private _query = '';
@@ -74,7 +62,7 @@ export class RAGChat extends Widget {
     public onError?: (error: Error) => void;
 
     constructor(style: Partial<Style> = {}, opts?: RAGChatOptions) {
-        super(mergeStyles(defaultStyle(), { border: 'single', height: 20, ...style }));
+        super(mergeStyles(defaultStyle(), { border: 'none', focusRingStyle: 'none', height: 20, ...style }));
 
         if (!opts) {
             throw new Error('RAGChat options are required');
@@ -85,7 +73,6 @@ export class RAGChat extends Widget {
         this._docsPath = opts.docsPath;
         this._maxContextChunks = opts.maxContextChunks ?? 3;
         this.onError = opts.onError;
-        this._indexFn = opts.indexFn;
 
         const borderClr = opts.borderColor ?? 'cyan';
         this._borderColor = typeof borderClr === 'string'
@@ -112,9 +99,7 @@ export class RAGChat extends Widget {
         this.markDirty();
         try {
             await this._vectorStore.load();
-            if (this._indexFn) {
-                await this._indexFn(this._docsPath, this._vectorStore, this._ai);
-            }
+            await indexDirectory(this._docsPath, this._vectorStore, this._ai);
             await this._vectorStore.save();
         } finally {
             this._indexing = false;
@@ -134,7 +119,7 @@ export class RAGChat extends Widget {
 
         try {
             const chunks = await this._vectorStore.query(query, this._ai, this._maxContextChunks);
-            const contextText = chunks.map((c: any) => c.text).join('\n---\n');
+            const contextText = chunks.map((c: DocumentChunk) => c.text).join('\n---\n');
 
             const systemInstructions = `Use the following context from the local documentation to answer the user's query.\n\nContext:\n${contextText}`;
 
@@ -282,7 +267,7 @@ export class RAGChat extends Widget {
             screen.writeString(x + width - 15, y, '[ Indexing... ]', { ...attrs, fg: { type: 'named', name: 'yellow' } as any });
         } else if (this._loading) {
             // Cast needed: Color literal string or named structure is cast as any due to library-specific CellAttr type mismatches.
-            screen.writeString(x + width - 14, y, '[ Thinking... ]', { ...attrs, fg: { type: 'named', name: 'yellow' } as any });
+            screen.writeString(x + width - 15, y, '[ Thinking... ]', { ...attrs, fg: { type: 'named', name: 'yellow' } as any });
         }
 
         // Render multiline input box cleanly

@@ -199,8 +199,6 @@ export type {
 
 export { SurveyPrompt } from './SurveyPrompt.js';
 export type { SurveyPromptOptions, SurveyQuestion } from './SurveyPrompt.js';
-export { RAGChat } from './RAGChat.js';
-export type { RAGChatOptions } from './RAGChat.js';
 
 export { Breadcrumb } from './Breadcrumb.js';
 export type { BreadcrumbItem, BreadcrumbOptions } from './Breadcrumb.js';
@@ -211,6 +209,3 @@ export type { DisclosureOptions } from './Disclosure.js';
 
 export { Listbar } from './Listbar.js';
 export type { ListbarOptions, ListbarItem } from './Listbar.js';
-
-export { RAGChat } from './RAGChat.js';
-export type { RAGChatOptions } from './RAGChat.js';
