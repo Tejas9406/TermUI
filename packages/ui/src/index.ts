@@ -199,4 +199,5 @@ export type {
 export { SurveyPrompt } from './SurveyPrompt.js';
 export type { SurveyPromptOptions, SurveyQuestion } from './SurveyPrompt.js';
 
-
+export { Breadcrumb } from './Breadcrumb.js';
+export type { BreadcrumbItem, BreadcrumbOptions } from './Breadcrumb.js';
