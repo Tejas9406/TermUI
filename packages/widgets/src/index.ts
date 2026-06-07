@@ -160,6 +160,9 @@ export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
+export { Link } from './display/Link.js';
+export type { LinkOptions } from './display/Link.js';
+
 // ── Missing layout elements restored ──
 export { QRCodePattern, QRCode } from './display/QRCode.js';
 export type { QRCodePatternOptions, QRCodeOptions } from './display/QRCode.js';
