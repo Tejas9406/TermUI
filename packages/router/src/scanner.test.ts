@@ -1,27 +1,35 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import * as fs from 'node:fs';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+vi.mock('node:fs', () => ({
+    existsSync: vi.fn(),
+    readdirSync: vi.fn(),
+    statSync: vi.fn(),
+}));
+
+import * as fs from 'node:fs';
 import { scanRoutes } from './scanner.js';
 
 describe('scanRoutes', () => {
+    beforeEach(() => {
+        vi.mocked(fs.existsSync).mockReset();
+        vi.mocked(fs.readdirSync).mockReset();
+        vi.mocked(fs.statSync).mockReset();
+    });
+
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
     });
 
     it('returns empty array when directory does not exist', () => {
-        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        vi.mocked(fs.existsSync).mockReturnValue(false);
 
         expect(scanRoutes('/screens')).toEqual([]);
     });
 
     it('discovers root index route', () => {
-        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-
-        vi.spyOn(fs, 'readdirSync').mockReturnValue(['index.tsx'] as any);
-
-        vi.spyOn(fs, 'statSync').mockReturnValue({
-            isDirectory: () => false,
-        } as any);
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readdirSync).mockReturnValue(['index.tsx'] as any);
+        vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
 
         const routes = scanRoutes('/screens');
 
@@ -32,13 +40,9 @@ describe('scanRoutes', () => {
     });
 
     it('discovers standard route', () => {
-        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-
-        vi.spyOn(fs, 'readdirSync').mockReturnValue(['about.tsx'] as any);
-
-        vi.spyOn(fs, 'statSync').mockReturnValue({
-            isDirectory: () => false,
-        } as any);
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readdirSync).mockReturnValue(['about.tsx'] as any);
+        vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
 
         const routes = scanRoutes('/screens');
 
@@ -47,13 +51,9 @@ describe('scanRoutes', () => {
     });
 
     it('detects dynamic routes', () => {
-        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-
-        vi.spyOn(fs, 'readdirSync').mockReturnValue(['[id].tsx'] as any);
-
-        vi.spyOn(fs, 'statSync').mockReturnValue({
-            isDirectory: () => false,
-        } as any);
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readdirSync).mockReturnValue(['[id].tsx'] as any);
+        vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
 
         const routes = scanRoutes('/screens');
 
@@ -62,16 +62,12 @@ describe('scanRoutes', () => {
     });
 
     it('ignores private files', () => {
-        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-
-        vi.spyOn(fs, 'readdirSync').mockReturnValue([
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readdirSync).mockReturnValue([
             '_private.tsx',
             '.hidden.tsx',
         ] as any);
-
-        vi.spyOn(fs, 'statSync').mockReturnValue({
-            isDirectory: () => false,
-        } as any);
+        vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
 
         const routes = scanRoutes('/screens');
 
@@ -79,16 +75,12 @@ describe('scanRoutes', () => {
     });
 
     it('sorts static routes before dynamic routes', () => {
-        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-
-        vi.spyOn(fs, 'readdirSync').mockReturnValue([
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readdirSync).mockReturnValue([
             '[id].tsx',
             'about.tsx',
         ] as any);
-
-        vi.spyOn(fs, 'statSync').mockReturnValue({
-            isDirectory: () => false,
-        } as any);
+        vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
 
         const routes = scanRoutes('/screens');
 
